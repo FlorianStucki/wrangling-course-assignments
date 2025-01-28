@@ -1,0 +1,103 @@
+---
+title: "Assignment"
+author: "Florian Stucki"
+date: "2024-12-17"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  fig.width = 8,
+  fig.height = 6,
+  out.width = "100%",
+  error = FALSE,
+  message = FALSE,
+  warning = FALSE)
+
+```
+
+```{r}
+library(foreign)
+library(dplyr)
+library(ggplot2)
+library(ThemePark)
+library(tidyverse)
+library(paletteer)
+
+```
+# Data wrangling
+## Import data
+
+The data is from the study: "Violent video game exposure and moral disengagement in early adolescence: The moderating effect of moral identity" from Zhajun et al. (https://doi.org/10.1016/j.chb.2017.08.031).
+The sample included 800 adolescents from china(Mage = 13.17, SD = 0.65; range: 12–15 years).
+
+```{r}
+data_raw <- read.spss("../data/dataverse_files/2. Raw data_T2_T3_T4VVGE_MD_AG.sav", to.data.frame = TRUE)
+```
+## Tidy the Data
+
+```{r}
+data_tidy <- data_raw |> 
+  select(contains("mean")|contains("Mean")|contains("T2_k")|contains("T2_G")|contains("T2_J")) |> 
+   summarise(
+     mean_violence_games = rowMeans(across(c(Mean_violence2,                                         T2_Meanviolence3,T3_Meanviolence,T3_Meanviolence2,T3_Meanviolence3,T4_Meanviolence,T4_Meanviolence2,T4_Meanviolence3)),na.rm = TRUE),
+     
+peer_rep_aggression_mean = rowMeans(across(c(T2_K5,T2_K6,T2_K8,T2_K10,T2_K11,T2_K12))), 
+     
+self_rep_aggression_mean = rowMeans(across(c(T2_G1,T2_G2,T2_G3,T2_G4,T2_G5,T2_G6,T2_G7,T2_G8,T2_G9,T2_G10,T2_G11,T2_G12))), 
+
+aggression_mean = rowMeans(across(c(T2_G1,T2_G2,T2_G3,T2_G4,T2_G5,T2_G6,T2_G7,T2_G8,T2_G9,T2_G10,T2_G11,T2_G12,T2_K5,T2_K6,T2_K8,T2_K10,T2_K11,T2_K12)))
+
+)
+
+#Tidy the data to a long format
+
+data_tidy_long <- pivot_longer(data_tidy,cols = 2:3, names_to = "self_peer", values_to = "mean")
+
+```
+
+# Plot
+## Bad plot
+
+```{r}
+lm <- lm(aggression_mean~mean_violence_games,data = data_tidy)
+ggplot(lm,aes(aggression_mean,mean_violence_games)) +
+  geom_smooth(method = "lm", se= FALSE, color="red")+
+  labs(title= "The danger of violence in video games!!!", x = "Kids aggression" , y = "Level of violence in a video game" )+
+  theme_godfather()+
+    theme(plot.title = element_text(size = 50), 
+    axis.title = element_text(size = 35),   
+    axis.text = element_text(size = 30),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank())
+   
+```
+
+## Good plot
+
+```{r, fig.cap= "Aggression report peers: SE = .07, p < .001, Aggression self-report: SE: .05, p < .001"}
+ggplot(data_tidy_long,aes(mean,mean_violence_games, color = self_peer))+
+  geom_point(alpha = 0.1)+
+  geom_smooth(method = "lm",fullrange = TRUE, aes(fill=self_peer))+
+  theme_minimal() +
+  labs(title = "Higher level of violence in video games increases aggression slightly", x = "Reported aggression", y = "Level of violence in a video game") +
+  theme(legend.title = element_blank(),
+      plot.title = element_text(size = 30), 
+      axis.title = element_text(size = 25),   
+      axis.text = element_text(size = 25),   
+      legend.text = element_text(size = 20))+
+  scale_fill_paletteer_d(("fishualize::Acanthurus_olivaceus"),labels = c("Peer reportet aggression", "Self reportet aggression"))+
+  scale_color_paletteer_d(("fishualize::Acanthurus_olivaceus"),labels = c("Peer reportet aggression", "Self reportet aggression"))
+  
+
+```
+
+
+  
+
+```{r}
+sessionInfo()
+```
+
